@@ -3,7 +3,9 @@ import unittest
 import datetime
 import tempfile
 from xp3 import XP3, XP3Reader, XP3Writer
+import tracemalloc
 
+tracemalloc.start()
 
 class Encryption(unittest.TestCase):
     """Encryption test with Numpy and pure Python XORing"""
@@ -24,10 +26,10 @@ class Encryption(unittest.TestCase):
         # Crash test early if Numpy is not present
         import numpy
         del numpy
-        self.encrypt_and_decrypt(data, 'neko_vol0', True)
+        self.encrypt_and_decrypt(data, 'nekov0', True)
 
     def with_python(self, data):
-        self.encrypt_and_decrypt(data, 'neko_vol0', False)
+        self.encrypt_and_decrypt(data, 'nekov0', False)
 
     def test_numpy_uncompressed(self):
         self.with_numpy(b'dummy_data')

@@ -4,7 +4,7 @@ from io import BufferedReader
 from collections import namedtuple
 from datetime import datetime
 from .constants import XP3FileIsEncrypted
-
+#from math import ceil
 
 class XP3FileEncryption:
     encryption_chunk = struct.Struct('<QIH')
@@ -22,20 +22,20 @@ class XP3FileEncryption:
     @classmethod
     def read_from(cls, buffer: BufferedReader, name: bytes = b'eliF'):
         start = buffer.tell() + 8
-        size, adler32, file_path_length = cls.encryption_chunk.unpack(buffer.read(14))
-        file_path, = struct.unpack('<' + (str(file_path_length * 2) + 's') + 'xx',
-                                   buffer.read(2 + file_path_length * 2))
+        size, adler32, file_path_length = cls.encryption_chunk.unpack(
+            buffer.read(cls.encryption_chunk.size))
+        file_path, = struct.unpack('<' + (str(file_path_length * 2) + 's'),
+                                   buffer.read(file_path_length * 2))
         file_path = file_path.decode('utf-16le')
 
         if buffer.tell() != start + size:  # chunk size doesn't include the size itself
-            raise AssertionError('Buffer position {}, expected {}'.format(buffer.tell(),
-                                                                          start + size))
+            raise AssertionError('Buffer position {}, expected {}'.format(buffer.tell(), start + size))
         return cls(adler32, file_path, name)
 
     def to_bytes(self):
-        size = 4 + 2 + (len(self.file_path) * 2) + 2
+        size = 4 + 2 + (len(self.file_path) * 2)
         data = struct.pack('<QIH', size, self.adler32, len(self.file_path))
-        file_path = self.file_path.encode('utf-16le') + b'\x00\x00'
+        file_path = self.file_path.encode('utf-16le')
         return self.name + data + file_path
 
     def __repr__(self):
@@ -109,32 +109,36 @@ class XP3FileInfo:
         self.is_encrypted = is_encrypted
         self.uncompressed_size = uncompressed_size
         self.compressed_size = compressed_size
+        if not file_path:
+            raise Exception("No path provided for XP3FileInfo")
+        while file_path[-2:] == '\x00\x00':
+            file_path = file_path[:-2]
         self.file_path = file_path
 
     @classmethod
     def read_from(cls, buffer: BufferedReader):
         start = buffer.tell() + 8
-        size, flags, uncompressed_size, compressed_size, file_path_length \
-            = cls.info_chunk.unpack(buffer.read(30))
+        size, flags, uncompressed_size, compressed_size, file_path_length = XP3FileInfo.info_chunk.unpack(
+            buffer.read(XP3FileInfo.info_chunk.size))
         encrypted = bool(flags & XP3FileIsEncrypted)
 
         # 2 bytes per character and 2 bytes null-terminator
-        file_path, = struct.unpack('<' + (str(file_path_length * 2) + 's') + 'xx',
-                                   buffer.read(2 + file_path_length * 2))
+        file_path, = struct.unpack('<' + (str(file_path_length * 2) + 's'),
+                                   buffer.read(file_path_length * 2))
         file_path = file_path.decode('utf-16le')
 
         if buffer.tell() != start + size:
-            raise AssertionError('Buffer position {}, expected {}'.format(buffer.tell(),
-                                                                          start + size))
+            raise AssertionError('Buffer position {}, expected {}'.format(buffer.tell(), start + size))
         return cls(encrypted, uncompressed_size, compressed_size, file_path)
 
     def to_bytes(self):
-        size = 4 + 8 + 8 + 2 + (len(self.file_path) * 2) + 2
+        path_len = len(self.file_path)
+        size = 4 + 8 + 8 + 2 + (len(self.file_path) * 2)
         flags = XP3FileIsEncrypted if self.is_encrypted else 0
 
         return b'info' \
-               + self.info_chunk.pack(size, flags, self.uncompressed_size, self.compressed_size, len(self.file_path)) \
-               + self.file_path.encode('utf-16le') + b'\x00\x00'
+               + self.info_chunk.pack(size, flags, self.uncompressed_size, self.compressed_size, path_len) \
+               + self.file_path.encode('utf-16le')
 
     def __repr__(self):
         return "<XP3FileInfo encrypted={}, uncompressed_size={}, compressed_size={}, file_path='{}'"\

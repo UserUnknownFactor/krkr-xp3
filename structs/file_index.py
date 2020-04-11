@@ -5,7 +5,6 @@ from .file_entry import XP3FileEntry
 from io import BytesIO
 from .constants import XP3Signature, XP3FileIndexContinue, XP3FileIndexCompressed, Xp3FileIndexUncompressed
 
-
 class peek:
     """
         Context manager, goes to position in the buffer and goes back
@@ -50,28 +49,41 @@ class XP3FileIndex:
 
         return cls.from_entries(entries, buffer)
 
-    def extract(self, to=''):
+    def unpack(self, to=''):
         """Dump file index from buffer"""
 
         with peek(self.buffer, len(XP3Signature)):
             index = self.read_index(self.buffer)
 
-        dirname = os.path.dirname(to)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+        if to and to.strip():
+            dirname = os.path.dirname(to)
+            if dirname and not os.path.exists(dirname):
+                os.makedirs(dirname)
+        else:
+            to = 'xp3_index.bin'
 
-        with open(to, 'wb') as out:
+        with open(to+'_index.bin', 'wb') as out:
             out.write(index)
 
         return self
 
     @staticmethod
-    def read_index(buffer):
+    def read_index(buffer, version=2):
         """Reads file index from buffer"""
-        offset, = struct.unpack('<1Q', buffer.read(8))
-        if not offset:
+        offset = None
+        if (version == 1):
+            offset, = struct.unpack('<1Q', buffer.read(8))
+
+        additional_header_offset, = struct.unpack('<1Q', buffer.read(8))
+
+        if not offset and not additional_header_offset:
             raise AssertionError('File index offset is missing')
-        buffer.seek(offset, 0)
+
+        minor_version, = struct.unpack('<1I', buffer.read(4))
+        if minor_version != 1:
+            raise AssertionError("Unexpected XP3 version")
+
+        buffer.seek(additional_header_offset, 0)
 
         flag, = struct.unpack('<B', buffer.read(1))
         if flag == XP3FileIndexContinue:  # Index is in another castle
@@ -109,9 +121,15 @@ class XP3FileIndex:
     def __getitem__(self, item):
         """Access file entries by index position or their file path"""
         if isinstance(item, int):
-            return self.entries[item]
+            try:
+                return self.entries[item]
+            except IndexError:
+                raise StopIteration
         elif isinstance(item, str):
-            return self.entries[self.path_index[item]]
+            try:
+                return self.entries[self.path_index[item]]
+            except IndexError:
+                raise StopIteration
         else:
             raise TypeError
 

@@ -3,7 +3,7 @@ from structs import XP3Signature, XP3FileIndex, XP3File
 
 
 class XP3Reader:
-    def __init__(self, buffer, silent: bool = False, use_numpy: bool = True):
+    def __init__(self, buffer, silent: bool = False, use_numpy: bool = False):
         if isinstance(buffer, bytes):
             buffer = BytesIO(buffer)
 
