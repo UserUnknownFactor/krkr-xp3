@@ -1,7 +1,6 @@
-import os
+import os, zlib
 from io import BytesIO
 from array import array
-import zlib
 from .encryption_parameters import encryption_parameters
 from .file_entry import XP3FileEntry
 try:
@@ -11,7 +10,7 @@ except ModuleNotFoundError:
     numpy = False
 from multiprocessing import Pool
 from functools import partial
-from scrambling import KSScrambling
+from .scrambling import KSScrambling
 
 class XP3DecryptionError(Exception):
     pass

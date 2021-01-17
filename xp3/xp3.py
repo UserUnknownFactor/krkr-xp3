@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import os
-from xp3reader import XP3Reader
-from xp3writer import XP3Writer
+from .xp3reader import XP3Reader
+from .xp3writer import XP3Writer
 
 class XP3(XP3Reader, XP3Writer):
     def __init__(self, target, mode='r', silent=False):
-        self.mode = mode
+        self.mode = mode # for debugging convenience
         self.target = target
 
         if self._is_readmode:
@@ -95,15 +95,15 @@ class XP3(XP3Reader, XP3Writer):
         super().add(internal_filepath, data, encryption_type, timestamp)
 
 
-if __name__ == '__main__':
+def main():
     import argparse, sys
-    from structs.encryption_parameters import encryption_parameters
+    from .structs.encryption_parameters import encryption_parameters
     VERSION_STR = "1.0.0"
 
     def input_filepath(path: str) -> str:
         if not os.path.exists(os.path.realpath(path)):
-            print(f"{path} dosn't exist or not accessible")
-            raise argparse.ArgumentError
+            print(f"ERROR: {path} dosn't exist or not accessible")
+            sys.exit(2)
         return path
 
     parser = argparse.ArgumentParser(description=f"KiriKiri .xp3 archive unpack/repack tool v{VERSION_STR}")
@@ -143,3 +143,7 @@ if __name__ == '__main__':
             if not is_silent:
                 print('Packing {} → {}'.format(os.path.abspath(args.input), args.output))
             xp3.add_folder(args.input, args.flatten, args.cypher)
+
+if __name__ == '__main__':
+    main()
+

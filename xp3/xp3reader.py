@@ -1,5 +1,5 @@
 from io import BytesIO
-from structs import XP3Signature, XP3FileIndex, XP3File
+from .structs import XP3Signature, XP3FileIndex, XP3File
 
 
 class XP3Reader:

@@ -1,6 +1,4 @@
-import os
-import zlib
-import struct
+import os, zlib, struct
 from .file_entry import XP3FileEntry
 from io import BytesIO
 from .constants import XP3Signature, XP3FileIndexContinue, XP3FileIndexCompressed, Xp3FileIndexUncompressed

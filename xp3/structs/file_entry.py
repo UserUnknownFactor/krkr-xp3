@@ -1,5 +1,4 @@
-import zlib
-import struct
+import zlib, struct
 from io import BufferedReader
 from collections import namedtuple
 from datetime import datetime

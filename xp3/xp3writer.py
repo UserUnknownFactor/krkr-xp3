@@ -1,8 +1,7 @@
 import os, zlib, struct, hashlib
 from io import BytesIO
-from structs import XP3FileIndex, XP3FileEncryption, XP3FileTime, XP3FileAdler, XP3FileSegments, XP3FileInfo, XP3File, \
-    XP3FileEntry, XP3Signature, encryption_parameters
-from scrambling import KSScrambling
+from .structs import XP3FileIndex, XP3FileEncryption, XP3FileTime, XP3FileAdler, XP3FileSegments, XP3FileInfo, XP3File, \
+    XP3FileEntry, XP3Signature, encryption_parameters, KSScrambling
 
 VERSION = 2
 
