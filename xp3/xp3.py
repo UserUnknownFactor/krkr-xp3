@@ -51,7 +51,10 @@ class XP3(XP3Reader, XP3Writer):
                     print('| Unpacking {} ({} -> {} bytes)'.format(file.file_path,
                                                                     file.info.compressed_size,
                                                                     file.info.uncompressed_size))
-                file.extract(to=to, encryption_type=encryption_type)
+                if os.path.isfile(os.path.join(to, file.file_path)):
+                    print('! File {} already exists'.format(os.path.join(to, file.file_path)))
+                else:
+                    file.extract(to=to, encryption_type=encryption_type)
             except OSError:  # Usually because of long file names
                 if not self.silent:
                     print('! Problem writing {}'.format(file.file_path))

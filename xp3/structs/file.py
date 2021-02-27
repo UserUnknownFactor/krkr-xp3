@@ -133,11 +133,18 @@ class XP3File(XP3FileEntry):
             # XOR the data
             with Pool(processes=None) as pool:
                 if "xor_full" in enc_type:
-                    key = (adler_key >> 24 ^ adler_key >> 16 ^ adler_key >> 8 ^ adler_key) & 0xFF
+                    key = 0
+                    if adler_key:
+                        key = (adler_key >> 24 ^ adler_key >> 16 ^ adler_key >> 8 ^ adler_key) & 0xFF
                     key = key if key else secondary_key
-                    data = array('B', pool.map(partial(plain_xor, key=key), data))
+                    if key:
+                        data = array('B', pool.map(partial(plain_xor, key=key), data))
                 elif "xor_plain" in enc_type:
                     key = adler_key & 0xFF
+                    if key:
+                        data = array('B', pool.map(partial(plain_xor, key=key), data))
+                elif "xor_byte" in enc_type:
+                    key = secondary_key & 0xFF
                     data = array('B', pool.map(partial(plain_xor, key=key), data))
                 elif "xor-p1-neg" in enc_type:
                     key = adler_key & 0xFF
