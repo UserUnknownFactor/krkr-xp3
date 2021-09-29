@@ -79,7 +79,8 @@ class XP3FileIndex:
 
         minor_version, = struct.unpack('<1I', buffer.read(4))
         if minor_version != 1:
-            raise AssertionError("Unexpected XP3 version")
+            pass
+            #raise AssertionError("Unexpected XP3 version")
 
         buffer.seek(additional_header_offset, 0)
 
