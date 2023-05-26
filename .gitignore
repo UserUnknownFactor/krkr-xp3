@@ -1,2 +1,4 @@
 __pycache__
 *.cmd
+/build
+krkr_xp3.egg-info

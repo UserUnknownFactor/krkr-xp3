@@ -61,7 +61,7 @@ class XP3File(XP3FileEntry):
             if checksum != self.adler32 and not self.silent:
                 print('! Checksum error. Expected: 0x%s, got: 0x%s.' % (hex(self.adler32), hex(checksum)))
 
-        if os.path.splitext(self.file_path)[1] in ['.ks', '.tjs']:
+        if os.path.splitext(self.file_path)[1] in ['.ks', '.tjs', '.wks', '.wtjs']:
             with KSScrambling(all_data) as scrambled:
                 udata = scrambled.decode()
                 if udata is None or udata == b'':
