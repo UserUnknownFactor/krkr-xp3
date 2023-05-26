@@ -13,14 +13,14 @@ class XP3(XP3Reader, XP3Writer):
                 if not os.path.isfile(target):
                     raise FileNotFoundError
                 self.target = open(target, 'rb')
-            XP3Reader.__init__(self, self.target, silent, False)
+            XP3Reader.__init__(self, self.target, silent, True)
         elif self._is_writemode:
             if isinstance(target, str):
                 dir = os.path.dirname(target)
                 if dir and not os.path.exists(dir):
                     os.makedirs(dir)
                 self.target = open(target, 'wb')
-            XP3Writer.__init__(self, self.target, silent, False)
+            XP3Writer.__init__(self, self.target, silent, True)
         else:
             raise ValueError('Invalid operation mode')
 

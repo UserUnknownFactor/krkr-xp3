@@ -105,9 +105,16 @@ class XP3File(XP3FileEntry):
         data = output_buffer.read()
 
         # Use numpy if available
-        if numpy and use_numpy and ("xor_full" in enc_type):
+        if numpy and use_numpy and ("xor_full" in enc_type or "xor_plain" in enc_type):
+            key = None
             adler_key = bitwise_xor(adler32, master_key)
-            key = bitwise_and(bitwise_xor(bitwise_xor(bitwise_xor(right_shift(adler_key, 24), right_shift(adler_key, 16)), right_shift(adler_key, 8)), adler_key), 0xFF)
+            
+            if "xor_full" in enc_type:
+                if adler_key:
+                    key = bitwise_and(bitwise_xor(bitwise_xor(bitwise_xor(right_shift(adler_key, 24), right_shift(adler_key, 16)), right_shift(adler_key, 8)), adler_key), 0xFF)
+            elif "xor_plain" in enc_type:
+                key = adler_key & 0xFF
+
             key = key if key else secondary_key
 
             data = frombuffer(data, dtype=uint8)
