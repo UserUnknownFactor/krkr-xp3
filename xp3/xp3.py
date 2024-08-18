@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os
+import os, re
 from .xp3reader import XP3Reader
 from .xp3writer import XP3Writer
 
@@ -39,6 +39,26 @@ class XP3(XP3Reader, XP3Writer):
     @property
     def _is_writemode(self):
         return True if self.mode == 'w' else False
+
+    @staticmethod
+    def split_to_size(text, size):
+        return text
+        size = size * 4
+        return '\n'.join([text[i:i+size] for i in range(0, len(text), size)])
+
+    @staticmethod
+    def gen_hashes(seed):
+        import struct, binascii
+        hash = struct.unpack('<L', binascii.unhexlify(seed.replace(r'\x','')))[0]
+        s = b''
+        for k in range (0,32,4):
+            if (0 != (hash & 1)):
+                hash |= 0x80000000
+            else:
+                hash &= 0x7FFFFFFF
+            s += bytes(struct.pack('<L', hash))
+        hash >>= 1
+        return s
 
     def unpack(self, to='', encryption_type='none'):
         """Unpack all files in the archive to a specified folder"""
@@ -114,6 +134,7 @@ def main():
     mode.add_argument('-u', '--unpack', action='store_true', help='Unpack XP3 archive')
     mode.add_argument('-r', '--repack', action='store_true', help='Repack XP3 archive')
     parser.add_argument('-s', '--silent', action='store_true', default=False)
+    parser.add_argument('-k', '--key', default='', help="Archive XOR key")
     parser.add_argument('-f', '--flatten', action='store_true', default=False,
                         help="""Ignore the subdirectories and pack the archive as if all files are in the root folder,
                         some games take only patches packed this way.
@@ -122,30 +143,41 @@ def main():
     parser.add_argument('-c', '--cypher', choices=encryption_parameters.keys(), default='none',
                         help='Specify the cypher mode')
     parser.add_argument('input', type=input_filepath, help='File to unpack or folder to repack')
-    parser.add_argument('output', help='Output folder to unpack into or output file to repack into')
+    parser.add_argument('output', nargs='?', help='Output folder to unpack into or output file to repack into')
 
     if len(sys.argv) < 2:
         parser.print_help(sys.stderr)
         sys.exit()
+
     args = parser.parse_args()
-
-
     is_silent = args.silent
+    out = args.output
+    cypher = args.cypher
+    if args.key:
+        import codecs
+        cypher = "hiddenb"
+        encryption_parameters[cypher][1] = codecs.getdecoder("hex_codec")(args.key.replace('\\x',''))[0]
+
     if args.unpack:
         with XP3(args.input, 'r', is_silent) as xp3:
+            if not out:
+                out = os.path.splitext(args.input)[0]
             if args.index:
                 if not is_silent:
-                    print('Dumping index of {}'.format(args.output))
-                xp3.file_index.unpack(args.output)
+                    print('Dumping index of {}'.format(out))
+                xp3.file_index.unpack(out)
             else:
                 if not is_silent:
-                    print('Unpacking {} → {}'.format(args.input, os.path.abspath(args.output)))
-                xp3.unpack(args.output, args.cypher)
+                    print('Unpacking {} → {}'.format(args.input, os.path.abspath(out)))
+                xp3.unpack(out, cypher)
     elif args.repack:
-        with XP3(args.output, 'w', is_silent) as xp3:
+        if not out:
+            out = args.input + ".xp3"
+        with XP3(out, 'w', is_silent) as xp3:
             if not is_silent:
-                print('Packing {} → {}'.format(os.path.abspath(args.input), args.output))
-            xp3.add_folder(args.input, args.flatten, args.cypher)
+                print('Packing {} → {}'.format(os.path.abspath(args.input), out))
+            xp3.add_folder(args.input, args.flatten, cypher)
+
 
 if __name__ == '__main__':
     main()
