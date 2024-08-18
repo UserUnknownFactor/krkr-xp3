@@ -12,7 +12,7 @@ class XP3Reader:
         self.use_numpy = use_numpy
 
         if XP3Signature != self.buffer.read(len(XP3Signature)):
-            raise AssertionError('Is not an XP3 file')
+            raise AssertionError('The data is not an XP3 file')
 
         if not silent:
             print('Reading the file index', end='')
