@@ -135,7 +135,7 @@ class XP3Writer:
                 is_encrypted = False
 
         uncompressed_size = len(uncompressed_data)
-        if os.path.splitext(internal_filepath)[1] in ['.mp3', '.ogg', '.png', '.jpg', '.jpeg']:
+        if os.path.splitext(internal_filepath)[1] in ['.mp3', '.ogg', '.png', '.jpg', '.jpeg', '.pimg', '.tlg', '.webp', '.webm', '.wmv', '.mpg', '.avi', '.mp4']:
             compressed_data = uncompressed_data
         else:
             compressed_data = zlib.compress(uncompressed_data, level=9)

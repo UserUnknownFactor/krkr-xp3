@@ -21,14 +21,19 @@ class XP3FileEncryption:
     @classmethod
     def read_from(cls, buffer: BufferedReader, name: bytes = b'eliF'):
         start = buffer.tell() + 8
-        size, adler32, file_path_length = cls.encryption_chunk.unpack(
-            buffer.read(cls.encryption_chunk.size))
+        size, adler32, file_path_length = cls.encryption_chunk.unpack(buffer.read(cls.encryption_chunk.size))
+        if not file_path_length:
+            buffer.seek(start + size)
+            return cls(adler32, '', name)
+
         file_path, = struct.unpack('<' + (str(file_path_length * 2) + 's'),
                                    buffer.read(file_path_length * 2))
         file_path = file_path.decode('utf-16le')
 
+        if buffer.tell() != start + size and buffer.read(2) == b'\0\0':
+            pass
         if buffer.tell() != start + size:  # chunk size doesn't include the size itself
-            raise AssertionError('Buffer position {}, expected {}'.format(buffer.tell(), start + size))
+            raise AssertionError(f'XP3FileEncryption: Buffer position {buffer.tell()}, expected {start + size}, path: {file_path} (len: {size})')
         return cls(adler32, file_path, name)
 
     def to_bytes(self):
@@ -104,7 +109,7 @@ class XP3FileSegments:
 class XP3FileInfo:
     info_chunk = struct.Struct('<QIQQH')
 
-    def __init__(self, is_encrypted: bool, uncompressed_size: int, compressed_size: int, file_path: str):
+    def __init__(self, is_encrypted: bool, uncompressed_size: int, compressed_size: int, file_path: str, c_style: bool=False):
         self.is_encrypted = is_encrypted
         self.uncompressed_size = uncompressed_size
         self.compressed_size = compressed_size
@@ -121,14 +126,23 @@ class XP3FileInfo:
             buffer.read(XP3FileInfo.info_chunk.size))
         encrypted = bool(flags & XP3FileIsEncrypted)
 
-        # 2 bytes per character and 2 bytes null-terminator
-        file_path, = struct.unpack('<' + (str(file_path_length * 2) + 's'),
-                                   buffer.read(file_path_length * 2))
-        file_path = file_path.decode('utf-16le')
+        c_style = False
+        if not file_path_length:
+            if buffer.read(2) == b'\0\0':
+                c_style = True
+            buffer.seek(start + size)
+        else:
+            # 2 bytes per character and 2 (possible) bytes null-terminator
+            file_path, = struct.unpack('<' + (str(file_path_length * 2) + 's'),
+                                       buffer.read(file_path_length * 2))
+            file_path = file_path.decode('utf-16le')
 
-        if buffer.tell() != start + size:
-            raise AssertionError('Buffer position {}, expected {}'.format(buffer.tell(), start + size))
-        return cls(encrypted, uncompressed_size, compressed_size, file_path)
+            if buffer.tell() != start + size and buffer.read(2) == b'\0\0':
+                c_style = True
+            if buffer.tell() != start + size:
+                raise AssertionError(f'XP3FileInfo: Buffer position {buffer.tell()}, expected {start + size}, path: {file_path} (len: {file_path_length*2})')
+
+        return cls(encrypted, uncompressed_size, compressed_size, file_path, c_style)
 
     def to_bytes(self):
         path_len = len(self.file_path)
@@ -180,8 +194,8 @@ class XP3FileEntry:
         self.info = info
 
         if encryption:
-            if adlr.value != encryption.adler32:
-                raise AssertionError('Checksum values in adlr chunk and encryption chunk do not match')
+            if self.file_path and adlr.value != encryption.adler32:
+                raise AssertionError(f"Checksums in adlr and encryption chunks don't match: 0x{adlr.value:X} != 0x{encryption.adler32:X} for {self}")
 
     @classmethod
     def read_from(cls, buffer: BufferedReader):
@@ -243,5 +257,4 @@ class XP3FileEntry:
         return encryption + header + entry
 
     def __repr__(self):
-        return "<XP3FileEntry file_path='{}', size={}, encrypted={}, timestamp={}>"\
-            .format(self.file_path, self.info.uncompressed_size, self.is_encrypted, datetime.utcfromtimestamp(self.time.timestamp))
+        return f"<XP3FileEntry file_path='{self.file_path}', size={self.info.uncompressed_size}, encrypted={self.is_encrypted}, timestamp={datetime.utcfromtimestamp(self.time.timestamp)}>"
