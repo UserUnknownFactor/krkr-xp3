@@ -52,17 +52,20 @@ class XP3Writer:
             raise FileExistsError(internal_filepath)
 
         self._filenames.append(internal_filepath)
-        file_entry, file = self._create_file_entry(
+        file_entry, file, is_compressed = self._create_file_entry(
             internal_filepath=internal_filepath,
             uncompressed_data=file,
             offset=self.buffer.tell(),
             encryption_type=encryption_type,
             timestamp=timestamp)
         self.file_entries.append(file_entry)
+
         if not self.silent:
-            print('| Packing {} ({} -> {} bytes)'.format(internal_filepath,
-                                                         file_entry.segm.uncompressed_size,
-                                                         file_entry.segm.compressed_size))
+            if is_compressed:
+                print(f'| Packed {internal_filepath} ({file_entry.segm.uncompressed_size}',
+                        f'-> {file_entry.segm.compressed_size} bytes)')
+            else:
+                print(f'| Stored {internal_filepath} ({file_entry.segm.uncompressed_size} bytes)')
         self.buffer.write(file)
 
     def pack_up(self) -> bytes:
@@ -167,7 +170,7 @@ class XP3Writer:
 
         file_entry = XP3FileEntry(encryption=encryption, time=time, adlr=adlr, segm=segm, info=info)
 
-        return file_entry, data
+        return file_entry, data, is_compressed
 
     @staticmethod
     def xor(data, adler32, encryption_type, use_numpy):
